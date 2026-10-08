@@ -1,11 +1,3 @@
-import os
-
-# Create project structure
-project_name = "reconciliation_app"
-os.makedirs(f"/mnt/data/{project_name}", exist_ok=True)
-
-# app.py content (simplified to save space, full script from earlier)
-app_py_content = '''\
 import streamlit as st
 import pandas as pd
 import openai
@@ -41,8 +33,8 @@ def generate_ai_reason(row):
     prompt = f"""
     Mismatch found:
     - Account Code: {row['key']}
-    - Xero \u2192 Debit: {row['debit_xero']}, Credit: {row['credit_xero']}
-    - Focus \u2192 Debit: {row['debit_focus']}, Credit: {row['credit_focus']}
+    - Xero → Debit: {row['debit_xero']}, Credit: {row['credit_xero']}
+    - Focus → Debit: {row['debit_focus']}, Credit: {row['credit_focus']}
     Provide a likely reason in simple terms.
     """
     try:
@@ -79,7 +71,7 @@ def ask_bot(question, reconciled_df):
     context = reconciled_df.to_csv(index=False)
     prompt = f"""
     You are a financial reconciliation assistant.
-    Data:\\n{context}
+    Data:\n{context}
     Question: {question}
     Answer shortly:
     """
@@ -141,27 +133,3 @@ if st.button("🧾 Reconcile Now") and xero_file and focus_file:
         st.markdown(f"**Q:** {q}")
         st.markdown(f"**A:** {a}")
         st.markdown("---")
-'''
-
-requirements_txt = '''
-streamlit
-pandas
-openai
-openpyxl
-yagmail
-twilio
-'''
-
-# Write files
-with open(f"/mnt/data/{project_name}/app.py", "w") as f:
-    f.write(app_py_content)
-
-with open(f"/mnt/data/{project_name}/requirements.txt", "w") as f:
-    f.write(requirements_txt)
-
-# Zip folder
-import shutil
-shutil.make_archive(f"/mnt/data/{project_name}", 'zip', f"/mnt/data/{project_name}")
-
-"/mnt/data/reconciliation_app.zip"
-
