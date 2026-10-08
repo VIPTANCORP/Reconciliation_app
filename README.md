@@ -27,3 +27,14 @@ TWILIO_AUTH_TOKEN = "..."
 
 - Xero TB CSV: `Account Code`, `Debit`, `Credit` columns
 - Focus TB CSV: `GL Code`, `Debit`, `Credit` columns
+
+## Tests
+
+The tests drive the app with Streamlit's `AppTest`, with file uploads, OpenAI,
+email and Twilio replaced by fakes (`tests/fakes.py`), so no secrets or network
+access are needed.
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
