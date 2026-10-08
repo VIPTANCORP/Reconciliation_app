@@ -88,15 +88,26 @@ st.title("🔄 Xero vs Focus Reconciliation with AI + WhatsApp")
 xero_file = st.file_uploader("📤 Upload Xero TB (CSV)", type=['csv'])
 focus_file = st.file_uploader("📤 Upload Focus TB (CSV)", type=['csv'])
 
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+
+# st.button is only True on the rerun right after the click, so keep the
+# results in session_state or they vanish on the next widget interaction.
 if st.button("🧾 Reconcile Now") and xero_file and focus_file:
     xero_df = pd.read_csv(xero_file)
     focus_df = pd.read_csv(focus_file)
     reconciled_df = reconcile_data(xero_df, focus_df)
 
-    st.success("✅ Reconciliation Complete")
-
     with st.spinner("💡 Generating AI Explanations..."):
         reconciled_df['ai_explanation'] = reconciled_df.apply(generate_ai_reason, axis=1)
+
+    st.session_state.reconciled_df = reconciled_df
+    st.session_state.chat_history = []
+
+if 'reconciled_df' in st.session_state:
+    reconciled_df = st.session_state.reconciled_df
+
+    st.success("✅ Reconciliation Complete")
 
     st.dataframe(reconciled_df)
 
@@ -106,26 +117,30 @@ if st.button("🧾 Reconcile Now") and xero_file and focus_file:
 
     st.download_button("📥 Download Excel", towrite, "reconciliation_output.xlsx", mime="application/vnd.ms-excel")
 
-    if st.checkbox("📧 Email this report"):
+    # Buttons and a form rather than checkboxes / bare text inputs: those keep
+    # their value across reruns and would resend on every interaction.
+    if st.button("📧 Email this report"):
         result = send_email(towrite, "reconciliation_output.xlsx")
         st.info(result)
 
-    if st.checkbox("📱 Send WhatsApp summary"):
-        mismatch_count = (reconciled_df['status'] == 'Mismatch').sum()
-        total_diff = (reconciled_df['debit_diff'].abs() + reconciled_df['credit_diff'].abs()).sum()
-        summary_msg = f"Reconciliation done. {mismatch_count} mismatches found. Total difference: {total_diff:.2f}."
-        to_number = st.text_input("Enter WhatsApp number (with country code, e.g. +1234567890)")
+    to_number = st.text_input("Enter WhatsApp number (with country code, e.g. +1234567890)")
+    if st.button("📱 Send WhatsApp summary"):
         if to_number:
+            mismatch_count = (reconciled_df['status'] == 'Mismatch').sum()
+            total_diff = (reconciled_df['debit_diff'].abs() + reconciled_df['credit_diff'].abs()).sum()
+            summary_msg = f"Reconciliation done. {mismatch_count} mismatches found. Total difference: {total_diff:.2f}."
             sid = send_whatsapp_message(to_number, summary_msg)
             st.success(f"WhatsApp message sent! SID: {sid}")
+        else:
+            st.warning("Enter a WhatsApp number first.")
 
     st.subheader("🤖 Ask the AI Assistant")
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
 
-    user_input = st.text_input("Type your question here about the reconciliation")
+    with st.form("ask_form", clear_on_submit=True):
+        user_input = st.text_input("Type your question here about the reconciliation")
+        asked = st.form_submit_button("Ask")
 
-    if user_input:
+    if asked and user_input:
         answer = ask_bot(user_input, reconciled_df)
         st.session_state.chat_history.append((user_input, answer))
 
